@@ -107,7 +107,7 @@ class AutoEncoder:
 
     def compile(self, learning_rate):
         self.learning_rate = learning_rate
-        optimizer = Adam(lr=learning_rate)
+        optimizer = Adam(learning_rate=learning_rate)
 
         def r_loss(y_true, y_pred):
             return K.mean(K.square(y_true - y_pred), axis=[1, 2, 3])
