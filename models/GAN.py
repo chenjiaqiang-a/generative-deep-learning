@@ -1,14 +1,12 @@
-from cProfile import run
 import os
 import pickle as pkl
-from unicodedata import name
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Input, Conv2D, Flatten, LeakyReLU, Activation, BatchNormalization, Dropout, Dense, Reshape, UpSampling2D, Conv2DTranspose
 from tensorflow.keras.optimizers import Adam, RMSprop
-from tensorflow.python.keras.utils.vis_utils import plot_model
 from tensorflow.keras.initializers import RandomNormal
+from tensorflow.python.keras.utils.vis_utils import plot_model
 
 
 class GAN:
