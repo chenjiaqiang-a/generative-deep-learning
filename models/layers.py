@@ -15,3 +15,10 @@ class ReflectionPadding2D(Layer):
     def call(self, x, mask=None):
         w_pad, h_pad = self.padding
         return tf.pad(x, [[0, 0], [h_pad, h_pad], [w_pad, w_pad], [0, 0]], 'REFLECT')
+    
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            'padding': self.padding
+        })
+        return config

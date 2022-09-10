@@ -1,6 +1,7 @@
 import os
 import pickle
 import skimage.transform as trans
+from skimage.io import imread
 import numpy as np
 from glob import glob
 from tensorflow.keras.datasets import mnist, cifar10, cifar100
@@ -111,7 +112,7 @@ class DataLoader:
         return img[np.newaxis, :, :, :]
 
     def imread(self, path):
-        return trans.resize(path, mode='RGB').astype(np.float32)
+        return imread(path, pilmode='RGB').astype(np.float32)
 
 
 def load_model(model_class, folder):
