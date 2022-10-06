@@ -4,9 +4,10 @@ from .GAN import GAN
 from .WGAN import WGAN
 from .WGANGP import WGANGP
 from .CycleGAN import CycleGAN
-from .RNNAttention import get_distinct, create_lookups, prepare_sequences, get_music_list, create_network, sample_with_temp
+# from .MuseGAN import MuseGAN
+from .RNNAttention import *
 
 __all__ = ["AutoEncoder", "VariationalAutoEncoder", "GAN", "WGAN",
-           "WGANGP", "CycleGAN", "get_distinct", "create_lookups",
-           "prepare_sequences", "get_music_list", "create_network",
-           "sample_with_temp"]
+           "WGANGP", "CycleGAN", "MuseGAN"]
+
+__all__.extend(RNNAttention.__all__)

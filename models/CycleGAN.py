@@ -1,4 +1,3 @@
-from __future__ import print_function, division
 import os
 import random
 import datetime
@@ -8,13 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle as pkl
 
-from tensorflow.keras.layers import Input, Dropout, Concatenate, Activation, LeakyReLU, UpSampling2D, Conv2D, Conv2DTranspose
-from tensorflow.keras.layers import add
+import tensorflow as tf
 from tensorflow_addons.layers import InstanceNormalization
-from tensorflow.keras.models import Model
-from tensorflow.keras.initializers import RandomNormal
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.utils import plot_model
 from .layers import ReflectionPadding2D
 
 
@@ -58,7 +52,8 @@ class CycleGAN:
         patch = int(self.img_rows / 2**3)
         self.disc_patch = (patch, patch, 1)
 
-        self.weight_init = RandomNormal(mean=0., stddev=0.02)
+        self.weight_init = tf.keras.initializers.RandomNormal(
+            mean=0., stddev=0.02)
 
         self.compile_models()
 
@@ -68,10 +63,12 @@ class CycleGAN:
         self.d_B = self.build_discriminator()
 
         self.d_A.compile(loss='mse',
-                         optimizer=Adam(self.learning_rate, 0.5),
+                         optimizer=tf.keras.optimizers.Adam(
+                             self.learning_rate, 0.5),
                          metrics=['accuracy'])
         self.d_B.compile(loss='mse',
-                         optimizer=Adam(self.learning_rate, 0.5),
+                         optimizer=tf.keras.optimizers.Adam(
+                             self.learning_rate, 0.5),
                          metrics=['accuracy'])
 
         # Build the generators
@@ -87,8 +84,8 @@ class CycleGAN:
         self.d_B.trainable = False
 
         # Input images from both domains
-        img_A = Input(shape=self.img_shape)
-        img_B = Input(shape=self.img_shape)
+        img_A = tf.keras.Input(shape=self.img_shape)
+        img_B = tf.keras.Input(shape=self.img_shape)
 
         # Translate images to the other domain
         fake_B = self.g_AB(img_A)
@@ -105,8 +102,8 @@ class CycleGAN:
         valid_B = self.d_B(fake_B)
 
         # Combined model trains generators to fool discriminators
-        self.combined = Model(inputs=[img_A, img_B],
-                              outputs=[valid_A, valid_B,
+        self.combined = tf.keras.Model(inputs=[img_A, img_B],
+                                       outputs=[valid_A, valid_B,
                                        reconstr_A, reconstr_B,
                                        img_A_id, img_B_id])
         self.combined.compile(loss=['mse', 'mse',
@@ -115,7 +112,7 @@ class CycleGAN:
                               loss_weights=[self.lambda_validation, self.lambda_validation,
                                             self.lambda_reconstr, self.lambda_reconstr,
                                             self.lambda_id, self.lambda_id],
-                              optimizer=Adam(0.0002, 0.5))
+                              optimizer=tf.keras.optimizers.Adam(0.0002, 0.5))
 
         self.d_A.trainable = True
         self.d_B.trainable = True
@@ -123,27 +120,27 @@ class CycleGAN:
     def build_generator_unet(self):
 
         def downsample(layer_input, filters, f_size=4):
-            d = Conv2D(filters, kernel_size=f_size,
-                       strides=2, padding='same')(layer_input)
+            d = tf.keras.layers.Conv2D(filters, kernel_size=f_size,
+                                       strides=2, padding='same')(layer_input)
             d = InstanceNormalization(axis=-1, center=False, scale=False)(d)
-            d = Activation('relu')(d)
+            d = tf.keras.layers.Activation('relu')(d)
 
             return d
 
         def upsample(layer_input, skip_input, filters, f_size=4, dropout_rate=0):
-            u = UpSampling2D(size=2)(layer_input)
-            u = Conv2D(filters, kernel_size=f_size,
-                       strides=1, padding='same')(u)
+            u = tf.keras.layers.UpSampling2D(size=2)(layer_input)
+            u = tf.keras.layers.Conv2D(filters, kernel_size=f_size,
+                                       strides=1, padding='same')(u)
             u = InstanceNormalization(axis=-1, center=False, scale=False)(u)
-            u = Activation('relu')(u)
+            u = tf.keras.layers.Activation('relu')(u)
             if dropout_rate:
-                u = Dropout(dropout_rate)(u)
+                u = tf.keras.layers.Dropout(dropout_rate)(u)
 
-            u = Concatenate()([u, skip_input])
+            u = tf.keras.layers.Concatenate()([u, skip_input])
             return u
 
         # Image input
-        img = Input(shape=self.img_shape)
+        img = tf.keras.Input(shape=self.img_shape)
 
         # Downsampling
         d1 = downsample(img, self.gen_n_filters)
@@ -156,58 +153,58 @@ class CycleGAN:
         u2 = upsample(u1, d2, self.gen_n_filters*2)
         u3 = upsample(u2, d1, self.gen_n_filters)
 
-        u4 = UpSampling2D(size=2)(u3)
-        output_img = Conv2D(self.channels, kernel_size=4,
-                            strides=1, padding='same', activation='tanh')(u4)
+        u4 = tf.keras.layers.UpSampling2D(size=2)(u3)
+        output_img = tf.keras.layers.Conv2D(self.channels, kernel_size=4,
+                                            strides=1, padding='same', activation='tanh')(u4)
 
-        return Model(img, output_img)
+        return tf.keras.Model(img, output_img)
 
     def build_generator_resnet(self):
 
         def conv7s1(layer_input, filters, final):
             y = ReflectionPadding2D(padding=(3, 3))(layer_input)
-            y = Conv2D(filters, kernel_size=(7, 7), strides=1,
-                       padding='valid', kernel_initializer=self.weight_init)(y)
+            y = tf.keras.layers.Conv2D(filters, kernel_size=(7, 7), strides=1,
+                                       padding='valid', kernel_initializer=self.weight_init)(y)
             if final:
-                y = Activation('tanh')(y)
+                y = tf.keras.layers.Activation('tanh')(y)
             else:
                 y = InstanceNormalization(
                     axis=-1, center=False, scale=False)(y)
-                y = Activation('relu')(y)
+                y = tf.keras.layers.Activation('relu')(y)
             return y
 
         def downsample(layer_input, filters):
-            y = Conv2D(filters, kernel_size=(3, 3), strides=2, padding='same',
-                       kernel_initializer=self.weight_init)(layer_input)
+            y = tf.keras.layers.Conv2D(filters, kernel_size=(3, 3), strides=2, padding='same',
+                                       kernel_initializer=self.weight_init)(layer_input)
             y = InstanceNormalization(axis=-1, center=False, scale=False)(y)
-            y = Activation('relu')(y)
+            y = tf.keras.layers.Activation('relu')(y)
             return y
 
         def residual(layer_input, filters):
             shortcut = layer_input
             y = ReflectionPadding2D(padding=(1, 1))(layer_input)
-            y = Conv2D(filters, kernel_size=(3, 3), strides=1,
-                       padding='valid', kernel_initializer=self.weight_init)(y)
+            y = tf.keras.layers.Conv2D(filters, kernel_size=(3, 3), strides=1,
+                                       padding='valid', kernel_initializer=self.weight_init)(y)
             y = InstanceNormalization(axis=-1, center=False, scale=False)(y)
-            y = Activation('relu')(y)
+            y = tf.keras.layers.Activation('relu')(y)
 
             y = ReflectionPadding2D(padding=(1, 1))(y)
-            y = Conv2D(filters, kernel_size=(3, 3), strides=1,
-                       padding='valid', kernel_initializer=self.weight_init)(y)
+            y = tf.keras.layers.Conv2D(filters, kernel_size=(3, 3), strides=1,
+                                       padding='valid', kernel_initializer=self.weight_init)(y)
             y = InstanceNormalization(axis=-1, center=False, scale=False)(y)
 
-            return add([shortcut, y])
+            return tf.keras.layers.add([shortcut, y])
 
         def upsample(layer_input, filters):
-            y = Conv2DTranspose(filters, kernel_size=(
+            y = tf.keras.layers.Conv2DTranspose(filters, kernel_size=(
                 3, 3), strides=2, padding='same', kernel_initializer=self.weight_init)(layer_input)
             y = InstanceNormalization(axis=-1, center=False, scale=False)(y)
-            y = Activation('relu')(y)
+            y = tf.keras.layers.Activation('relu')(y)
 
             return y
 
         # Image input
-        img = Input(shape=self.img_shape)
+        img = tf.keras.Input(shape=self.img_shape)
 
         y = img
 
@@ -228,33 +225,33 @@ class CycleGAN:
         y = conv7s1(y, 3, True)
         output = y
 
-        return Model(img, output)
+        return tf.keras.Model(img, output)
 
     def build_discriminator(self):
 
         def conv4(layer_input, filters, stride=2, norm=True):
-            y = Conv2D(filters, kernel_size=(4, 4), strides=stride,
-                       padding='same', kernel_initializer=self.weight_init)(layer_input)
+            y = tf.keras.layers.Conv2D(filters, kernel_size=(4, 4), strides=stride,
+                                       padding='same', kernel_initializer=self.weight_init)(layer_input)
 
             if norm:
                 y = InstanceNormalization(
                     axis=-1, center=False, scale=False)(y)
 
-            y = LeakyReLU(0.2)(y)
+            y = tf.keras.layers.LeakyReLU(0.2)(y)
 
             return y
 
-        img = Input(shape=self.img_shape)
+        img = tf.keras.Input(shape=self.img_shape)
 
         y = conv4(img, self.disc_n_filters, stride=2, norm=False)
         y = conv4(y, self.disc_n_filters*2, stride=2)
         y = conv4(y, self.disc_n_filters*4, stride=2)
         y = conv4(y, self.disc_n_filters*8, stride=1)
 
-        output = Conv2D(1, kernel_size=4, strides=1, padding='same',
-                        kernel_initializer=self.weight_init)(y)
+        output = tf.keras.layers.Conv2D(1, kernel_size=4, strides=1, padding='same',
+                                        kernel_initializer=self.weight_init)(y)
 
-        return Model(img, output)
+        return tf.keras.Model(img, output)
 
     def train_discriminators(self, imgs_A, imgs_B, valid, fake):
         # Translate images to opposite domain
@@ -310,7 +307,7 @@ class CycleGAN:
                 elapsed_time = datetime.datetime.now() - start_time
 
                 # Plot the progress
-                print("[Epoch %d/%d] [Batch %d/%d] [D loss: %f, acc: %3d%%] [G loss: %05f, adv: %05f, recon: %05f, id: %05f] time: %s " 
+                print("[Epoch %d/%d] [Batch %d/%d] [D loss: %f, acc: %3d%%] [G loss: %05f, adv: %05f, recon: %05f, id: %05f] time: %s "
                       % (self.epoch, epochs,
                           batch_i, data_loader.n_batches,
                           d_loss[0], 100*d_loss[7],
@@ -384,15 +381,15 @@ class CycleGAN:
             plt.close()
 
     def plot_model(self, run_folder):
-        plot_model(self.combined, to_file=os.path.join(
+        tf.keras.utils.plot_model(self.combined, to_file=os.path.join(
             run_folder, 'viz/combined.png'), show_shapes=True, show_layer_names=True)
-        plot_model(self.d_A, to_file=os.path.join(
+        tf.keras.utils.plot_model(self.d_A, to_file=os.path.join(
             run_folder, 'viz/d_A.png'), show_shapes=True, show_layer_names=True)
-        plot_model(self.d_B, to_file=os.path.join(
+        tf.keras.utils.plot_model(self.d_B, to_file=os.path.join(
             run_folder, 'viz/d_B.png'), show_shapes=True, show_layer_names=True)
-        plot_model(self.g_BA, to_file=os.path.join(
+        tf.keras.utils.plot_model(self.g_BA, to_file=os.path.join(
             run_folder, 'viz/g_BA.png'), show_shapes=True, show_layer_names=True)
-        plot_model(self.g_AB, to_file=os.path.join(
+        tf.keras.utils.plot_model(self.g_AB, to_file=os.path.join(
             run_folder, 'viz/g_AB.png'), show_shapes=True, show_layer_names=True)
 
     def save(self, folder):

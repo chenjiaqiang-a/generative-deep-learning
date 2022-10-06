@@ -1,12 +1,12 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from tensorflow.keras.callbacks import Callback, LearningRateScheduler
+import tensorflow as tf
 
 __all__ = ["CustomCallback", "step_decay_schedule"]
 
 
-class CustomCallback(Callback):
+class CustomCallback(tf.keras.callbacks.Callback):
     def __init__(self, run_folder, print_every_n_batches, initial_epoch, vae):
         self.epoch = initial_epoch
         self.run_folder = run_folder
@@ -36,4 +36,4 @@ def step_decay_schedule(initial_lr, decay_factor, step_size=1):
         new_lr = initial_lr * (decay_factor ** np.floor(epoch/step_size))
         return new_lr
 
-    return LearningRateScheduler(schedule)
+    return tf.keras.callbacks.LearningRateScheduler(schedule)

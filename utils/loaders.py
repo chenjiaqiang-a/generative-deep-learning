@@ -4,11 +4,10 @@ import skimage.transform as trans
 from skimage.io import imread
 import numpy as np
 from glob import glob
-from tensorflow.keras.datasets import mnist, cifar10, cifar100
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import tensorflow as tf
 
 __all__ = ["load_model", "load_mnist", "ImageLabelLoader", "load_safari",
-           "load_cifar", "load_celeb", "DataLoader"]
+           "load_cifar", "load_celeb", "DataLoader", "load_music"]
 
 
 class ImageLabelLoader:
@@ -17,7 +16,7 @@ class ImageLabelLoader:
         self.target_size = target_size
 
     def build(self, att, batch_size, label=None):
-        data_gen = ImageDataGenerator(rescale=1.0/255.0)
+        data_gen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1.0/255.0)
         if label:
             data_flow = data_gen.flow_from_dataframe(
                 att,
@@ -126,7 +125,7 @@ def load_model(model_class, folder):
 
 
 def load_mnist():
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
     x_train = x_train.astype("float32") / 255.0
     x_train = x_train.reshape(x_train.shape + (1,))
@@ -175,9 +174,9 @@ def load_safari(folder):
 
 def load_cifar(label, num):
     if num == 10:
-        (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
     else:
-        (x_train, y_train), (x_test, y_test) = cifar100.load_data(label_mode="fine")
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data(label_mode="fine")
 
     train_mask = [y[0] == label for y in y_train]
     test_mask = [y[0] == label for y in y_test]
@@ -193,7 +192,7 @@ def load_cifar(label, num):
 def load_celeb(data_name, image_size, batch_size):
     data_folder = os.path.join("./data", data_name)
 
-    data_gen = ImageDataGenerator(preprocessing_function=lambda x: (
+    data_gen = tf.keras.preprocessing.image.ImageDataGenerator(preprocessing_function=lambda x: (
         x.astype('float32') - 127.5) / 127.5)
 
     x_train = data_gen.flow_from_directory(
