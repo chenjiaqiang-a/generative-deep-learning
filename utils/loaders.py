@@ -209,7 +209,7 @@ def load_celeb(data_name, image_size, batch_size):
 def load_music(data_name, filename, n_bars, n_steps_per_bar):
     file = os.path.join("./data", data_name, filename)
 
-    with np.load(file, encoding='bytes') as f:
+    with np.load(file, encoding='bytes', allow_pickle=True) as f:
         data = f['train']
 
     data_ints = []

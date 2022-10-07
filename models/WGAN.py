@@ -108,7 +108,7 @@ class WGAN:
             shape=(self.z_dim,), name="generator_input")
 
         x = generator_input
-        x = tf.keras.Dense(np.prod(self.generator_initial_dense_layer_size),
+        x = tf.keras.layers.Dense(np.prod(self.generator_initial_dense_layer_size),
                            kernel_initializer=self.weight_init)(x)
         if self.generator_batch_norm_momentum:
             x = tf.keras.layers.BatchNormalization(

@@ -318,7 +318,7 @@ class WGANGP:
         for i in range(r):
             for j in range(c):
                 axs[i, j].imshow(np.squeeze(
-                    gen_imgs[cnt, :, :, :]), cmap='Grey')
+                    gen_imgs[cnt, :, :, :]), cmap='Greys')
                 axs[i, j].axis('off')
                 cnt += 1
         fig.savefig(os.path.join(
