@@ -3,6 +3,7 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras as keras
 from utils import CustomCallback, step_decay_schedule
 
 
@@ -39,12 +40,12 @@ class AutoEncoder:
 
     def _build(self):
         # THE ENCODER
-        encoder_input = tf.keras.Input(
+        encoder_input = keras.Input(
             shape=self.input_dim, name="encoder_input")
 
         x = encoder_input
         for i in range(self.n_layers_encoder):
-            conv_layer = tf.keras.layers.Conv2D(
+            conv_layer = keras.layers.Conv2D(
                 filters=self.encoder_conv_filters[i],
                 kernel_size=self.encoder_conv_kernel_size[i],
                 strides=self.encoder_conv_strides[i],
@@ -54,27 +55,27 @@ class AutoEncoder:
 
             x = conv_layer(x)
             if self.use_batch_norm:
-                x = tf.keras.layers.BatchNormalization()(x)
-            x = tf.keras.layers.LeakyReLU()(x)
+                x = keras.layers.BatchNormalization()(x)
+            x = keras.layers.LeakyReLU()(x)
             if self.use_dropout:
-                x = tf.keras.layers.Dropout(rate=0.25)(x)
+                x = keras.layers.Dropout(rate=0.25)(x)
 
         shape_before_flatten = tf.shape(x)[1:]
-        x = tf.keras.layers.Flatten()(x)
-        encoder_output = tf.keras.layers.Dense(
+        x = keras.layers.Flatten()(x)
+        encoder_output = keras.layers.Dense(
             self.z_dim, name="encoder_output")(x)
 
-        self.encoder = tf.keras.Model(encoder_input, encoder_output)
+        self.encoder = keras.Model(encoder_input, encoder_output)
 
         # THE DECODER
-        decoder_input = tf.keras.Input(
+        decoder_input = keras.Input(
             shape=(self.z_dim,), name="decoder_input")
 
-        x = tf.keras.layers.Dense(np.prod(shape_before_flatten))(decoder_input)
-        x = tf.keras.layers.Reshape(shape_before_flatten)(x)
+        x = keras.layers.Dense(np.prod(shape_before_flatten))(decoder_input)
+        x = keras.layers.Reshape(shape_before_flatten)(x)
 
         for i in range(self.n_layers_decoder):
-            conv_t_layer = tf.keras.layers.Conv2DTranspose(
+            conv_t_layer = keras.layers.Conv2DTranspose(
                 filters=self.decoder_conv_t_filters[i],
                 kernel_size=self.decoder_conv_t_kernel_size[i],
                 strides=self.decoder_conv_t_strides[i],
@@ -86,25 +87,25 @@ class AutoEncoder:
 
             if i < self.n_layers_decoder - 1:
                 if self.use_batch_norm:
-                    x = tf.keras.layers.BatchNormalization()(x)
-                x = tf.keras.layers.LeakyReLU()(x)
+                    x = keras.layers.BatchNormalization()(x)
+                x = keras.layers.LeakyReLU()(x)
                 if self.use_dropout:
-                    x = tf.keras.layers.Dropout(rate=0.25)(x)
+                    x = keras.layers.Dropout(rate=0.25)(x)
             else:
-                x = tf.keras.layers.Activation("sigmoid")(x)
+                x = keras.layers.Activation("sigmoid")(x)
 
         decoder_output = x
-        self.decoder = tf.keras.Model(decoder_input, decoder_output)
+        self.decoder = keras.Model(decoder_input, decoder_output)
 
         # THE FULL AUTOENCODER
         model_input = encoder_input
         model_output = self.decoder(encoder_output)
 
-        self.model = tf.keras.Model(model_input, model_output)
+        self.model = keras.Model(model_input, model_output)
 
     def compile(self, learning_rate):
         self.learning_rate = learning_rate
-        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
 
         def r_loss(y_true, y_pred):
             return tf.reduce_mean(tf.square(y_true - y_pred), axis=[1, 2, 3])
@@ -152,9 +153,9 @@ class AutoEncoder:
                                        decay_factor=lr_decay,
                                        step_size=1)
 
-        checkpoint = tf.keras.callbacks.ModelCheckpoint(os.path.join(run_folder, "weights/weights.h5"),
-                                                        save_weights_only=True,
-                                                        verbose=1)
+        checkpoint = keras.callbacks.ModelCheckpoint(os.path.join(run_folder, "weights/weights.h5"),
+                                                     save_weights_only=True,
+                                                     verbose=1)
 
         callback_list = [checkpoint, custom_callback, lr_sched]
 
@@ -168,15 +169,15 @@ class AutoEncoder:
         )
 
     def plot_model(self, run_folder):
-        tf.keras.utils.plot_model(self.model,
-                                  to_file=os.path.join(
-                                      run_folder, "viz/model.png"),
-                                  show_shapes=True, show_layer_names=True)
-        tf.keras.utils.plot_model(self.encoder,
-                                  to_file=os.path.join(
-                                      run_folder, "viz/encoder.png"),
-                                  show_shapes=True, show_layer_names=True)
-        tf.keras.utils.plot_model(self.decoder,
-                                  to_file=os.path.join(
-                                      run_folder, "viz/decoder.png"),
-                                  show_shapes=True, show_layer_names=True)
+        keras.utils.plot_model(self.model,
+                               to_file=os.path.join(
+                                   run_folder, "viz/model.png"),
+                               show_shapes=True, show_layer_names=True)
+        keras.utils.plot_model(self.encoder,
+                               to_file=os.path.join(
+                                   run_folder, "viz/encoder.png"),
+                               show_shapes=True, show_layer_names=True)
+        keras.utils.plot_model(self.decoder,
+                               to_file=os.path.join(
+                                   run_folder, "viz/decoder.png"),
+                               show_shapes=True, show_layer_names=True)

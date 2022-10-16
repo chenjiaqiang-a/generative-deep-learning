@@ -2,6 +2,7 @@ import os
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import tensorflow.keras as keras
 import tensorflow as tf
 
 
@@ -51,7 +52,7 @@ class WGAN:
         self.n_layers_critic = len(critic_conv_filters)
         self.n_layers_generator = len(generator_conv_filters)
 
-        self.weight_init = tf.keras.initializers.RandomNormal(
+        self.weight_init = keras.initializers.RandomNormal(
             mean=0.0, stddev=0.02)
 
         self.d_losses = []
@@ -68,19 +69,19 @@ class WGAN:
 
     def _get_activation(self, activation):
         if activation == "leaky_relu":
-            layer = tf.keras.layers.LeakyReLU(alpha=0.2)
+            layer = keras.layers.LeakyReLU(alpha=0.2)
         else:
-            layer = tf.keras.layers.Activation(activation)
+            layer = keras.layers.Activation(activation)
         return layer
 
     def _build_critic(self):
         # THE CRITIC
-        critic_input = tf.keras.Input(
+        critic_input = keras.Input(
             shape=self.input_dim, name="critic_input")
 
         x = critic_input
         for i in range(self.n_layers_critic):
-            x = tf.keras.layers.Conv2D(
+            x = keras.layers.Conv2D(
                 filters=self.critic_conv_filters[i],
                 kernel_size=self.critic_conv_kernel_size[i],
                 strides=self.critic_conv_strides[i],
@@ -89,39 +90,39 @@ class WGAN:
                 name=f"critic_conv_{i}"
             )(x)
             if self.critic_batch_norm_momentum and i > 0:
-                x = tf.keras.layers.BatchNormalization(
+                x = keras.layers.BatchNormalization(
                     momentum=self.critic_batch_norm_momentum)(x)
             x = self._get_activation(self.critic_activation)(x)
             if self.critic_dropout_rate:
-                x = tf.keras.layers.Dropout(rate=self.critic_dropout_rate)(x)
+                x = keras.layers.Dropout(rate=self.critic_dropout_rate)(x)
 
-        x = tf.keras.layers.Flatten()(x)
+        x = keras.layers.Flatten()(x)
 
-        critic_output = tf.keras.layers.Dense(
+        critic_output = keras.layers.Dense(
             1, activation=None, kernel_initializer=self.weight_init)(x)
 
-        self.critic = tf.keras.Model(critic_input, critic_output)
+        self.critic = keras.Model(critic_input, critic_output)
 
     def _build_generator(self):
         # THE GENERATOR
-        generator_input = tf.keras.Input(
+        generator_input = keras.Input(
             shape=(self.z_dim,), name="generator_input")
 
         x = generator_input
-        x = tf.keras.layers.Dense(np.prod(self.generator_initial_dense_layer_size),
-                           kernel_initializer=self.weight_init)(x)
+        x = keras.layers.Dense(np.prod(self.generator_initial_dense_layer_size),
+                               kernel_initializer=self.weight_init)(x)
         if self.generator_batch_norm_momentum:
-            x = tf.keras.layers.BatchNormalization(
+            x = keras.layers.BatchNormalization(
                 momentum=self.generator_batch_norm_momentum)(x)
         x = self._get_activation(self.generator_activation)(x)
-        x = tf.keras.layers.Reshape(self.generator_initial_dense_layer_size)(x)
+        x = keras.layers.Reshape(self.generator_initial_dense_layer_size)(x)
         if self.generator_dropout_rate:
-            x = tf.keras.layers.Dropout(rate=self.generator_dropout_rate)(x)
+            x = keras.layers.Dropout(rate=self.generator_dropout_rate)(x)
 
         for i in range(self.n_layers_generator):
             if self.generator_upsample[i] == 2:
-                x = tf.keras.layers.UpSampling2D()(x)
-                x = tf.keras.layers.Conv2D(
+                x = keras.layers.UpSampling2D()(x)
+                x = keras.layers.Conv2D(
                     filters=self.generator_conv_filters[i],
                     kernel_size=self.generator_conv_kernel_size[i],
                     padding="same",
@@ -129,7 +130,7 @@ class WGAN:
                     name=f"generator_conv_{i}"
                 )(x)
             else:
-                x = tf.keras.layers.Conv2DTranspose(
+                x = keras.layers.Conv2DTranspose(
                     filters=self.generator_conv_filters[i],
                     kernel_size=self.generator_conv_kernel_size[i],
                     strides=self.generator_conv_strides[i],
@@ -139,22 +140,22 @@ class WGAN:
                 )(x)
             if i < self.n_layers_generator - 1:
                 if self.generator_batch_norm_momentum:
-                    x = tf.keras.layers.BatchNormalization(
+                    x = keras.layers.BatchNormalization(
                         momentum=self.generator_batch_norm_momentum)(x)
                 x = self._get_activation(self.generator_activation)(x)
             else:
-                x = tf.keras.layers.Activation("tanh")(x)
+                x = keras.layers.Activation("tanh")(x)
 
         generator_output = x
-        self.generator = tf.keras.Model(generator_input, generator_output)
+        self.generator = keras.Model(generator_input, generator_output)
 
     def _get_optim(self, lr):
         if self.optimizer == "adam":
-            optim = tf.keras.optimizers.Adam(learning_rate=lr, beta_1=0.5)
+            optim = keras.optimizers.Adam(learning_rate=lr, beta_1=0.5)
         elif self.optimizer == "rmsprop":
-            optim = tf.keras.optimizers.RMSprop(learning_rate=lr)
+            optim = keras.optimizers.RMSprop(learning_rate=lr)
         else:
-            optim = tf.keras.optimizers.Adam(learning_rate=lr)
+            optim = keras.optimizers.Adam(learning_rate=lr)
         return optim
 
     def _set_trainable(self, m, val):
@@ -172,9 +173,9 @@ class WGAN:
         # COMPILE THE FULL GAN
         self._set_trainable(self.critic, False)
 
-        model_input = tf.keras.Input(shape=(self.z_dim,), name="model_input")
+        model_input = keras.Input(shape=(self.z_dim,), name="model_input")
         model_output = self.critic(self.generator(model_input))
-        self.model = tf.keras.Model(model_input, model_output)
+        self.model = keras.Model(model_input, model_output)
 
         self.model.compile(
             optimizer=self._get_optim(self.generator_learning_rate),
@@ -265,12 +266,12 @@ class WGAN:
         plt.close()
 
     def plot_model(self, run_folder):
-        tf.keras.utils.plot_model(self.model, to_file=os.path.join(run_folder, 'viz/model.png'),
-                                  show_shapes=True, show_layer_names=True)
-        tf.keras.utils.plot_model(self.critic, to_file=os.path.join(run_folder, 'viz/critic.png'),
-                                  show_shapes=True, show_layer_names=True)
-        tf.keras.utils.plot_model(self.generator, to_file=os.path.join(run_folder, 'viz/generator.png'),
-                                  show_shapes=True, show_layer_names=True)
+        keras.utils.plot_model(self.model, to_file=os.path.join(run_folder, 'viz/model.png'),
+                               show_shapes=True, show_layer_names=True)
+        keras.utils.plot_model(self.critic, to_file=os.path.join(run_folder, 'viz/critic.png'),
+                               show_shapes=True, show_layer_names=True)
+        keras.utils.plot_model(self.generator, to_file=os.path.join(run_folder, 'viz/generator.png'),
+                               show_shapes=True, show_layer_names=True)
 
     def save(self, folder):
         with open(os.path.join(folder, "params.pkl"), "wb") as f:

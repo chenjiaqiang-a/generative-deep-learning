@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from functools import partial
 
 import tensorflow as tf
+import tensorflow.keras as keras
 from music21 import note, stream, duration, tempo
 
-keras = tf.keras
 layers = keras.layers
 
 
@@ -241,7 +241,8 @@ class MuseGAN():
 
     def get_opti(self, lr):
         if self.optimizer == 'adam':
-            opti = keras.optimizers.Adam(learning_rate=lr, beta_1=0.5, beta_2=0.9)
+            opti = keras.optimizers.Adam(
+                learning_rate=lr, beta_1=0.5, beta_2=0.9)
         elif self.optimizer == 'rmsprop':
             opti = keras.optimizers.RMSprop(learning_rate=lr)
         else:

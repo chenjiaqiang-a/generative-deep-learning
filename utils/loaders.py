@@ -16,7 +16,8 @@ class ImageLabelLoader:
         self.target_size = target_size
 
     def build(self, att, batch_size, label=None):
-        data_gen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1.0/255.0)
+        data_gen = tf.keras.preprocessing.image.ImageDataGenerator(
+            rescale=1.0/255.0)
         if label:
             data_flow = data_gen.flow_from_dataframe(
                 att,
@@ -176,7 +177,8 @@ def load_cifar(label, num):
     if num == 10:
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
     else:
-        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data(label_mode="fine")
+        (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar100.load_data(
+            label_mode="fine")
 
     train_mask = [y[0] == label for y in y_train]
     test_mask = [y[0] == label for y in y_test]

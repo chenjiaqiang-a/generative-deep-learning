@@ -4,6 +4,7 @@ import glob
 
 from music21 import corpus, converter
 import tensorflow as tf
+import tensorflow.keras as keras
 
 __all__ = ['get_music_list', 'create_network', 'get_distinct', 'create_lookups',
            'prepare_sequences', 'sample_with_temp']
@@ -23,52 +24,52 @@ def get_music_list(data_folder):
 
 def create_network(n_notes, n_durations, embed_size=100, rnn_units=256, use_attention=False):
     """ create the structure of the neural network """
-    notes_in = tf.keras.Input(shape=(None,))
-    durations_in = tf.keras.Input(shape=(None,))
+    notes_in = keras.Input(shape=(None,))
+    durations_in = keras.Input(shape=(None,))
 
-    x1 = tf.keras.layers.Embedding(n_notes, embed_size)(notes_in)
-    x2 = tf.keras.layers.Embedding(n_durations, embed_size)(durations_in)
+    x1 = keras.layers.Embedding(n_notes, embed_size)(notes_in)
+    x2 = keras.layers.Embedding(n_durations, embed_size)(durations_in)
 
-    x = tf.keras.layers.Concatenate()([x1, x2])
+    x = keras.layers.Concatenate()([x1, x2])
 
-    x = tf.keras.layers.LSTM(rnn_units, return_sequences=True)(x)
+    x = keras.layers.LSTM(rnn_units, return_sequences=True)(x)
     # x = Dropout(0.2)(x)
 
     if use_attention:
-        x = tf.keras.layers.LSTM(rnn_units, return_sequences=True)(x)
+        x = keras.layers.LSTM(rnn_units, return_sequences=True)(x)
         # x = Dropout(0.2)(x)
 
-        e = tf.keras.layers.Dense(1, activation='tanh')(x)
-        e = tf.keras.layers.Reshape([-1])(e)
-        alpha = tf.keras.layers.Activation('softmax')(e)
+        e = keras.layers.Dense(1, activation='tanh')(x)
+        e = keras.layers.Reshape([-1])(e)
+        alpha = keras.layers.Activation('softmax')(e)
 
-        alpha_repeated = tf.keras.layers.Permute([2, 1])(
-            tf.keras.layers.RepeatVector(rnn_units)(alpha))
+        alpha_repeated = keras.layers.Permute([2, 1])(
+            keras.layers.RepeatVector(rnn_units)(alpha))
 
-        c = tf.keras.layers.Multiply()([x, alpha_repeated])
-        c = tf.keras.layers.Lambda(lambda xin: tf.reduce_sum(xin, axis=1),
-                                   output_shape=(rnn_units,))(c)
+        c = keras.layers.Multiply()([x, alpha_repeated])
+        c = keras.layers.Lambda(lambda xin: tf.reduce_sum(xin, axis=1),
+                                output_shape=(rnn_units,))(c)
 
     else:
-        c = tf.keras.layers.LSTM(rnn_units)(x)
+        c = keras.layers.LSTM(rnn_units)(x)
         # c = Dropout(0.2)(c)
 
-    notes_out = tf.keras.layers.Dense(
+    notes_out = keras.layers.Dense(
         n_notes, activation='softmax', name='pitch'
     )(c)
-    durations_out = tf.keras.layers.Dense(
+    durations_out = keras.layers.Dense(
         n_durations, activation='softmax', name='duration'
     )(c)
 
-    model = tf.keras.Model([notes_in, durations_in], [
-                           notes_out, durations_out])
+    model = keras.Model([notes_in, durations_in], [
+        notes_out, durations_out])
 
     if use_attention:
-        att_model = tf.keras.Model([notes_in, durations_in], alpha)
+        att_model = keras.Model([notes_in, durations_in], alpha)
     else:
         att_model = None
 
-    optim = tf.keras.optimizers.RMSprop(learning_rate=0.001)
+    optim = keras.optimizers.RMSprop(learning_rate=0.001)
     model.compile(loss=['categorical_crossentropy', 'categorical_crossentropy'],
                   optimizer=optim)
 
@@ -126,9 +127,9 @@ def prepare_sequences(notes, durations, lookups, distincts, seq_len=32):
         durations_network_input, (n_patterns, seq_len))
     network_input = [notes_network_input, durations_network_input]
 
-    notes_network_output = tf.keras.utils.to_categorical(
+    notes_network_output = keras.utils.to_categorical(
         notes_network_output, num_classes=n_notes)
-    durations_network_output = tf.keras.utils.to_categorical(
+    durations_network_output = keras.utils.to_categorical(
         durations_network_output, num_classes=n_durations)
     network_output = [notes_network_output, durations_network_output]
 

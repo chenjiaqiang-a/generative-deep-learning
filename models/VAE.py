@@ -2,6 +2,7 @@ import os
 import pickle
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras as keras
 from tensorflow.python.framework.ops import disable_eager_execution
 
 from utils import CustomCallback, step_decay_schedule
@@ -42,12 +43,12 @@ class VariationalAutoEncoder:
         self._build()
 
     def _build(self):
-        encoder_input = tf.keras.Input(
+        encoder_input = keras.Input(
             shape=self.input_dim, name="encoder_input")
 
         x = encoder_input
         for i in range(self.n_layers_encoder):
-            conv_layer = tf.keras.layers.Conv2D(
+            conv_layer = keras.layers.Conv2D(
                 filters=self.encoder_conv_filters[i],
                 kernel_size=self.encoder_conv_kernel_size[i],
                 strides=self.encoder_conv_strides[i],
@@ -57,16 +58,16 @@ class VariationalAutoEncoder:
 
             x = conv_layer(x)
             if self.use_batch_norm:
-                x = tf.keras.layers.BatchNormalization()(x)
-            x = tf.keras.layers.LeakyReLU()(x)
+                x = keras.layers.BatchNormalization()(x)
+            x = keras.layers.LeakyReLU()(x)
             if self.use_dropout:
-                x = tf.keras.layers.Dropout(rate=0.25)(x)
+                x = keras.layers.Dropout(rate=0.25)(x)
 
         shape_before_flatten = tf.shape(x)[1:]
-        x = tf.keras.layers.Flatten()(x)
-        self.mu = tf.keras.layers.Dense(self.z_dim, name="mu")(x)
-        self.log_var = tf.keras.layers.Dense(self.z_dim, name="log_var")(x)
-        self.encoder_mu_log_var = tf.keras.Model(
+        x = keras.layers.Flatten()(x)
+        self.mu = keras.layers.Dense(self.z_dim, name="mu")(x)
+        self.log_var = keras.layers.Dense(self.z_dim, name="log_var")(x)
+        self.encoder_mu_log_var = keras.Model(
             encoder_input, (self.mu, self.log_var))
 
         def sampling(args):
@@ -74,20 +75,20 @@ class VariationalAutoEncoder:
             epsilon = tf.random.normal(
                 shape=tf.shape(mu), mean=0.0, stddev=1.0)
             return mu + tf.exp(log_var / 2) * epsilon
-        encoder_output = tf.keras.layers.Lambda(
+        encoder_output = keras.layers.Lambda(
             sampling, name="encoder_output")([self.mu, self.log_var])
 
-        self.encoder = tf.keras.Model(encoder_input, encoder_output)
+        self.encoder = keras.Model(encoder_input, encoder_output)
 
         # THE DECODER
-        decoder_input = tf.keras.Input(
+        decoder_input = keras.Input(
             shape=(self.z_dim,), name="decoder_input")
 
-        x = tf.keras.layers.Dense(np.prod(shape_before_flatten))(decoder_input)
-        x = tf.keras.layers.Reshape(shape_before_flatten)(x)
+        x = keras.layers.Dense(np.prod(shape_before_flatten))(decoder_input)
+        x = keras.layers.Reshape(shape_before_flatten)(x)
 
         for i in range(self.n_layers_decoder):
-            conv_t_layer = tf.keras.layers.Conv2DTranspose(
+            conv_t_layer = keras.layers.Conv2DTranspose(
                 filters=self.decoder_conv_t_filters[i],
                 kernel_size=self.decoder_conv_t_kernel_size[i],
                 strides=self.decoder_conv_t_strides[i],
@@ -99,21 +100,21 @@ class VariationalAutoEncoder:
 
             if i < self.n_layers_decoder - 1:
                 if self.use_batch_norm:
-                    x = tf.keras.layers.BatchNormalization()(x)
-                x = tf.keras.layers.LeakyReLU()(x)
+                    x = keras.layers.BatchNormalization()(x)
+                x = keras.layers.LeakyReLU()(x)
                 if self.use_dropout:
-                    x = tf.keras.layers.Dropout(rate=0.25)(x)
+                    x = keras.layers.Dropout(rate=0.25)(x)
             else:
-                x = tf.keras.layers.Activation("sigmoid")(x)
+                x = keras.layers.Activation("sigmoid")(x)
 
         decoder_output = x
-        self.decoder = tf.keras.Model(decoder_input, decoder_output)
+        self.decoder = keras.Model(decoder_input, decoder_output)
 
         # THE FULL VAE
         model_input = encoder_input
         model_output = self.decoder(encoder_output)
 
-        self.model = tf.keras.Model(model_input, model_output)
+        self.model = keras.Model(model_input, model_output)
 
     def compile(self, learning_rate, r_loss_factor):
         self.learning_rate = learning_rate
@@ -134,7 +135,7 @@ class VariationalAutoEncoder:
             kl_loss = vae_kl_loss(y_true, y_pred)
             return r_loss + kl_loss
 
-        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         self.model.compile(optimizer=optimizer, loss=vae_loss,
                            metrics=[vae_r_loss, vae_kl_loss])
 
@@ -179,9 +180,9 @@ class VariationalAutoEncoder:
         lr_sched = step_decay_schedule(initial_lr=self.learning_rate,
                                        decay_factor=lr_decay,
                                        step_size=1)
-        checkpoint = tf.keras.callbacks.ModelCheckpoint(os.path.join(run_folder, "weights/weights.h5"),
-                                                        save_weights_only=True,
-                                                        verbose=1)
+        checkpoint = keras.callbacks.ModelCheckpoint(os.path.join(run_folder, "weights/weights.h5"),
+                                                     save_weights_only=True,
+                                                     verbose=1)
 
         callback_list = [checkpoint, custom_callback, lr_sched]
 
@@ -196,15 +197,15 @@ class VariationalAutoEncoder:
         )
 
     def plot_model(self, run_folder):
-        tf.keras.utils.plot_model(self.model,
-                                  to_file=os.path.join(
-                                      run_folder, "viz/model.png"),
-                                  show_shapes=True, show_layer_names=True)
-        tf.keras.utils.plot_model(self.encoder,
-                                  to_file=os.path.join(
-                                      run_folder, "viz/encoder.png"),
-                                  show_shapes=True, show_layer_names=True)
-        tf.keras.utils.plot_model(self.decoder,
-                                  to_file=os.path.join(
-                                      run_folder, "viz/decoder.png"),
-                                  show_shapes=True, show_layer_names=True)
+        keras.utils.plot_model(self.model,
+                               to_file=os.path.join(
+                                   run_folder, "viz/model.png"),
+                               show_shapes=True, show_layer_names=True)
+        keras.utils.plot_model(self.encoder,
+                               to_file=os.path.join(
+                                   run_folder, "viz/encoder.png"),
+                               show_shapes=True, show_layer_names=True)
+        keras.utils.plot_model(self.decoder,
+                               to_file=os.path.join(
+                                   run_folder, "viz/decoder.png"),
+                               show_shapes=True, show_layer_names=True)

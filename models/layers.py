@@ -1,10 +1,11 @@
 import tensorflow as tf
+import tensorflow.keras as keras
 
 
-class ReflectionPadding2D(tf.keras.layers.Layer):
+class ReflectionPadding2D(keras.layers.Layer):
     def __init__(self, padding=(1, 1), **kwargs):
         self.padding = tuple(padding)
-        self.input_spec = [tf.keras.layers.InputSpec(ndim=4)]
+        self.input_spec = [keras.layers.InputSpec(ndim=4)]
         super(ReflectionPadding2D, self).__init__(**kwargs)
 
     def compute_output_shape(self, s):
