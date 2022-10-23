@@ -13,3 +13,8 @@ kill -9 PID
 
 zip -r test.zip ./test
 ```
+
+### 世界模型 WorldModel
+- 收集随机 rollout 数据
+```shell
+```
