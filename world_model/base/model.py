@@ -1,18 +1,13 @@
-# python model.py car_racing --filename ./controller/car_racing.cma.4.32.best.json --render_mode --record_video
-# xvfb-run -a -s "-screen 0 1400x900x24" python model.py car_racing --filename ./controller/car_racing.cma.4.32.best.json --render_mode --record_video
-
-
-import numpy as np
+import os
 import random
 import json
 import time
 import argparse
 import time
-
-import config
-
+import numpy as np
 from gym.wrappers import Monitor
 
+import config
 from env import make_env
 from networks import RNN, VAE, Controller
 
@@ -27,12 +22,11 @@ ADD_NOISE = False
 
 
 def make_model():
-
     vae = VAE()
-    vae.set_weights('./vae/weights.h5')
+    vae.set_weights(os.path.join(config.RUN_FOLDER, 'vae/weights.h5'))
 
     rnn = RNN()
-    rnn.set_weights('./rnn/weights.h5')
+    rnn.set_weights(os.path.join(config.RUN_FOLDER, 'rnn/weights.h5'))
 
     controller = Controller()
 
@@ -71,7 +65,8 @@ class Model:
         self.cell_values = np.zeros(self.rnn.hidden_units)
 
         self.shapes = [
-            (self.rnn.hidden_units + self.rnn.z_dim, self.output_size)]
+            (self.rnn.hidden_units + self.rnn.z_dim, self.output_size)
+        ]
 
         idx = 0
         for shape in self.shapes:
@@ -187,7 +182,6 @@ def simulate(model, num_episode=5, seed=-1, max_len=-1, generate_data_mode=False
     count_times = [0, 0]
 
     for episode in range(num_episode):
-        # print(f'Episode {episode}')
         model.reset()
 
         obs = model.env.reset()
@@ -202,7 +196,6 @@ def simulate(model, num_episode=5, seed=-1, max_len=-1, generate_data_mode=False
         model.env.render("rgb_array")
 
         for t in range(max_episode_length):
-            # print(f'Timestep {t}')
             if obs.shape == model.vae.input_dim:  # running in real environment
                 obs = config.adjust_obs(obs)
                 reward = config.adjust_reward(reward)
@@ -211,13 +204,14 @@ def simulate(model, num_episode=5, seed=-1, max_len=-1, generate_data_mode=False
                 model.env.render("human")
                 if RENDER_DELAY:
                     time.sleep(0.1)
-            # else:
-            #   model.env.render('rgb_array')
 
             vae_encoded_obs = model.update(obs, t)
 
-            input_to_rnn = [np.array([[np.concatenate([vae_encoded_obs, action, [reward]])]]), np.array(
-                [model.hidden]), np.array([model.cell_values])]
+            input_to_rnn = [
+                np.array([[np.concatenate([vae_encoded_obs, action, [reward]])]]),
+                np.array([model.hidden]),
+                np.array([model.cell_values])
+            ]
             start = time.process_time()
             out = model.rnn.forward.predict(input_to_rnn)
             y_pred = out[0][0][0]
@@ -232,12 +226,10 @@ def simulate(model, num_episode=5, seed=-1, max_len=-1, generate_data_mode=False
                 action = model.get_action(
                     controller_obs, t=t, add_noise=ADD_NOISE)
 
-            # print(action)
-            # action = [-0.1,1,0]
-
             new_time = time.process_time() - start
-            avg_time[0] = ((avg_time[0] * count_times[0]) +
-                           new_time) / (count_times[0] + 1)
+            avg_time[0] = (
+                (avg_time[0] * count_times[0]) + new_time) / (count_times[0] + 1
+                                                              )
             count_times[0] += 1
 
             start = time.process_time()
@@ -245,11 +237,10 @@ def simulate(model, num_episode=5, seed=-1, max_len=-1, generate_data_mode=False
             obs, reward, done, _ = model.env.step(action)
 
             new_time = time.process_time() - start
-            avg_time[1] = ((avg_time[1] * count_times[1]) +
-                           new_time) / (count_times[1] + 1)
+            avg_time[1] = (
+                (avg_time[1] * count_times[1]) + new_time) / (count_times[1] + 1
+                                                              )
             count_times[1] += 1
-
-            # print(avg_time)
 
             total_reward += reward
 
@@ -320,13 +311,12 @@ def main(args):
                 model, render_mode=render_mode, num_episode=1, max_len=max_length, generate_data_mode=generate_data_mode)
             print("terminal reward", reward,
                   "average steps taken", np.mean(steps_taken)+1)
-            # break
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=('View a trained agent'))
-    parser.add_argument(
-        'env_name', type=str, help='car_racing etc - this is only used for labelling files etc, the actual environments are defined in train_envs in config.py')
+    parser.add_argument('env_name', type=str,
+                        help='car_racing etc - this is only used for labelling files etc, the actual environments are defined in train_envs in config.py')
     parser.add_argument('--filename', type=str, default='',
                         help='Path to the trained model json file')
     parser.add_argument('--seed', type=int, default=111, help='which seed?')
@@ -340,9 +330,8 @@ if __name__ == "__main__":
                         help='render the run')
     parser.add_argument('--record_video', action='store_true',
                         help='record the run to ./videos')
-    parser.add_argument('--max_length', type=int, default=-
-                        1, help='max_length of an episode')
-
+    parser.add_argument('--max_length', type=int, default=-1,
+                        help='max_length of an episode')
     args = parser.parse_args()
 
     main(args)

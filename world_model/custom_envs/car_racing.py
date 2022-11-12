@@ -12,56 +12,6 @@ import Box2D
 from Box2D.b2 import fixtureDef, polygonShape, contactListener
 
 
-# Easiest continuous control task to learn from pixels, a top-down racing environment.
-# Discreet control is reasonable in this environment as well, on/off discretisation is
-# fine.
-#
-# State consists of STATE_W x STATE_H pixels.
-#
-# Reward is -0.1 every frame and +1000/N for every track tile visited, where N is
-# the total number of tiles in track. For example, if you have finished in 732 frames,
-# your reward is 1000 - 0.1*732 = 926.8 points.
-#
-# Game is solved when agent consistently gets 900+ points. Track is random every episode.
-#
-# Episode finishes when all tiles are visited. Car also can go outside of PLAYFIELD, that
-# is far off the track, then it will get -100 and die.
-#
-# Some indicators shown at the bottom of the window and the state RGB buffer. From
-# left to right: true speed, four ABS sensors, steering wheel position, gyroscope.
-#
-# To play yourself (it's rather fast for humans), type:
-#
-# python gym/envs/box2d/car_racing.py
-#
-# Remember it's powerful rear-wheel drive car, don't press accelerator and turn at the
-# same time.
-#
-# Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
-
-# STATE_W = 64   # less than Atari 160x192
-# STATE_H = 64
-# VIDEO_W = 800
-# VIDEO_H = 600
-# WINDOW_W = 800
-# WINDOW_H = 600
-
-# SCALE       = 6.0        # Track scale
-# TRACK_RAD   = 900/SCALE  # Track is heavily morphed circle with this radius
-# PLAYFIELD   = 2000/SCALE # Game over boundary
-# FPS         = 50
-# ZOOM        = 2.7        # Camera zoom
-# ZOOM_FOLLOW = True       # Set to False for fixed view (don't use zoom)
-
-
-# TRACK_DETAIL_STEP = 21/SCALE
-# TRACK_TURN_RATE = 0.31
-# TRACK_WIDTH = 40/SCALE
-# BORDER = 8/SCALE
-# BORDER_MIN_COUNT = 4
-
-# ROAD_COLOR = [0.4, 0.4, 0.4]
-
 STATE_W = 64   # less than Atari 160x192
 STATE_H = 64
 VIDEO_W = 600
@@ -69,12 +19,12 @@ VIDEO_H = 400
 WINDOW_W = 1200
 WINDOW_H = 1000
 
-SCALE = 6.0        # Track scale
-TRACK_RAD = 900/SCALE  # Track is heavily morphed circle with this radius
+SCALE = 6.0             # Track scale
+TRACK_RAD = 900/SCALE   # Track is heavily morphed circle with this radius
 PLAYFIELD = 3000/SCALE  # Game over boundary
 FPS = 50
-ZOOM = 2.7        # Camera zoom
-ZOOM_FOLLOW = True       # Set to False for fixed view (don't use zoom)
+ZOOM = 2.7              # Camera zoom
+ZOOM_FOLLOW = True      # Set to False for fixed view (don't use zoom)
 
 
 TRACK_DETAIL_STEP = 21/SCALE
@@ -118,14 +68,12 @@ class FrictionDetector(contactListener):
             return
         if begin:
             obj.tiles.add(tile)
-            # print tile.road_friction, "ADD", len(obj.tiles)
             if not tile.road_visited:
                 tile.road_visited = True
                 self.env.reward += 1000.0/len(self.env.track)
                 self.env.tile_visited_count += 1
         else:
             obj.tiles.remove(tile)
-            # print tile.road_friction, "DEL", len(obj.tiles) -- should delete to zero when on grass (this works)
 
 
 class CarRacing(gym.Env):
@@ -147,8 +95,8 @@ class CarRacing(gym.Env):
         self.reward = 0.0
         self.prev_reward = 0.0
 
-        self.action_space = spaces.Box(np.array(
-            [-1, 0, 0]), np.array([+1, +1, +1]), dtype=np.float32)  # steer, gas, brake
+        self.action_space = spaces.Box(np.array([-1, 0, 0]), np.array([+1, +1, +1]),
+                                       dtype=np.float32)  # steer, gas, brake
         self.observation_space = spaces.Box(
             low=0, high=255, shape=(STATE_H, STATE_W, 3), dtype=np.uint8)
 
@@ -183,10 +131,6 @@ class CarRacing(gym.Env):
             checkpoints.append(
                 (alpha, rad*math.cos(alpha), rad*math.sin(alpha)))
 
-        # print "\n".join(str(h) for h in checkpoints)
-        # self.road_poly = [ (    # uncomment this to see checkpoints
-        #    [ (tx,ty) for a,tx,ty in checkpoints ],
-        #    (0.7,0.7,0.9) ) ]
         self.road = []
 
         # Go from one checkpoint to another to create track
@@ -244,7 +188,6 @@ class CarRacing(gym.Env):
             no_freeze -= 1
             if no_freeze == 0:
                 break
-        # print "\n".join([str(t) for t in enumerate(track)])
 
         # Find closed loop range i1..i2, first loop should be ignored, second is OK
         i1, i2 = -1, -1
@@ -253,14 +196,12 @@ class CarRacing(gym.Env):
             i -= 1
             if i == 0:
                 return False  # Failed
-            pass_through_start = track[i][0] > self.start_alpha and track[i -
-                                                                          1][0] <= self.start_alpha
+            pass_through_start = track[i][0] > self.start_alpha and track[i - 1][0] <= self.start_alpha
             if pass_through_start and i2 == -1:
                 i2 = i
             elif pass_through_start and i1 == -1:
                 i1 = i
                 break
-        #print("Track generation: %i..%i -> %i-tiles track" % (i1, i2, i2-i1))
         assert i1 != -1
         assert i2 != -1
 
@@ -345,13 +286,11 @@ class CarRacing(gym.Env):
             success = self._create_track()
             if success:
                 break
-            #print("retry to generate track (normal if there are not many of this messages)")
         self.car = Car(self.world, *self.track[0][1:4])
 
         return self.step(None)[0]
 
     def step(self, action):
-        # print(self.t * FPS)
         if action is not None:
             self.car.steer(-action[0])
             self.car.gas(action[1])
@@ -566,9 +505,6 @@ if __name__ == "__main__":
             if steps % 200 == 0 or done:
                 print("\naction " + str(["{:+0.2f}".format(x) for x in a]))
                 print("step {} total_reward {:+0.2f}".format(steps, total_reward))
-                #import matplotlib.pyplot as plt
-                # plt.imshow(s)
-                # plt.savefig("test.jpeg")
             steps += 1
             # Faster, but you can as well call env.render() every time to play full window.
             if not record_video:

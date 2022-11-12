@@ -13,7 +13,7 @@ def activations(a):
     return a
 
 
-class Controller():
+class Controller:
     def __init__(self):
         self.time_factor = TIME_FACTOR
         self.noise_bias = NOISE_BIAS

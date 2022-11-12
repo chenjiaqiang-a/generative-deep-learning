@@ -8,6 +8,7 @@ from gym.utils import seeding
 from gym.envs.classic_control import rendering
 
 from base.model import make_model
+import base.config as config
 
 
 FPS = 50
@@ -20,7 +21,7 @@ HIDDEN_UNITS = 256
 GAUSSIAN_MIXTURES = 5
 Z_DIM = 32
 
-initial_z = np.load('./data/initial_z.npz')
+initial_z = np.load(config.DATA_DIR + '/initial_z.npz')
 initial_mu = initial_z['initial_mu']
 initial_log_var = initial_z['initial_log_var']
 
@@ -36,7 +37,6 @@ def get_pi_idx(x, pdf):
         if (accumulate >= x):
             return i
     random_value = np.random.randint(N)
-    #print('error with sampling ensemble, returning random', random_value)
     return random_value
 
 
@@ -48,9 +48,9 @@ class CarRacingDream(gym.Env):
 
     def __init__(self, model):
         self.observation_space = Box(
-            low=-50., high=50., shape=(model.rnn.z_dim,), dtype=np.float32)  # , dtype=np.float32
-        self.action_space = spaces.Box(np.array(
-            [-1, 0, 0]), np.array([+1, +1, +1]), dtype=np.float32)  # steer, gas, brake
+            low=-50., high=50., shape=(model.rnn.z_dim,), dtype=np.float32)
+        self.action_space = spaces.Box(np.array([-1, 0, 0]), np.array([+1, +1, +1]),
+                                       dtype=np.float32)  # steer, gas, brake
 
         self.seed()
 
@@ -93,20 +93,21 @@ class CarRacingDream(gym.Env):
             self.viewer = None
 
     def get_mixture_coef(self, z_pred):
-
         log_pi, mu, log_sigma = np.split(z_pred, 3, 1)
         log_pi = log_pi - np.log(np.sum(np.exp(log_pi), axis=1, keepdims=True))
 
         return log_pi, mu, log_sigma
 
     def sample_next_mdn_output(self, action):
-
         d = GAUSSIAN_MIXTURES * Z_DIM
 
         z_dim = self.model.rnn.z_dim
 
-        input_to_rnn = [np.array([[np.concatenate(
-            [self.z, action, [self.previous_reward]])]]), np.array([self.h]), np.array([self.c])]
+        input_to_rnn = [
+            np.array([[np.concatenate([self.z, action, [self.previous_reward]])]]),
+            np.array([self.h]),
+            np.array([self.c])
+        ]
 
         out = self.model.rnn.forward.predict(input_to_rnn)
 
@@ -127,7 +128,6 @@ class CarRacingDream(gym.Env):
 
         # adjust temperatures
         pi = np.copy(log_pi)
-        # pi -= pi.max()
         pi = np.exp(pi)
         pi /= pi.sum(axis=1).reshape(z_dim, 1)
 
@@ -139,29 +139,20 @@ class CarRacingDream(gym.Env):
 
         next_z = self.sample_z(chosen_mu, chosen_log_sigma)
 
-        # print(next_z)
-        # print(rew_pred)
         if rew_pred > 0:
             next_reward = 1
         else:
             next_reward = 0
 
-        # if done > 0:
-        #     next_done = True
-        # else:
-        #     next_done = False
-
         self.h = new_h
         self.c = new_c
         self.previous_reward = next_reward
 
-        return next_z, next_reward  # , next_done
+        return next_z, next_reward
 
     def step(self, action):
-        # print(self.t)
         self.t += 1
-        next_z, next_reward = self.sample_next_mdn_output(
-            action)  # , next_done
+        next_z, next_reward = self.sample_next_mdn_output(action)
         next_done = False
         if self.t > 1000:
             next_done = True
@@ -169,7 +160,6 @@ class CarRacingDream(gym.Env):
         return next_z, next_reward, next_done, {}
 
     def render(self, mode='human', close=False):
-
         if close:
             if self.viewer is not None:
                 self.viewer.close()
@@ -190,9 +180,7 @@ class CarRacingDream(gym.Env):
             pass
         if mode == 'rgb_array':
             return img
-
         elif mode == 'human':
-
             if self.viewer is None:
                 self.viewer = rendering.SimpleImageViewer()
             self.viewer.imshow(img)
@@ -245,9 +233,6 @@ if __name__ == "__main__":
             if steps % 200 == 0 or done:
                 print("\naction " + str(["{:+0.2f}".format(x) for x in a]))
                 print("step {} total_reward {:+0.2f}".format(steps, total_reward))
-                #import matplotlib.pyplot as plt
-                # plt.imshow(s)
-                # plt.savefig("test.jpeg")
             steps += 1
             # Faster, but you can as well call env.render() every time to play full window.
             if not record_video:

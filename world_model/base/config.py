@@ -11,17 +11,18 @@ DATA_ROLLOUT_DIR = DATA_DIR + '/rollout/'
 DATA_SERIES_DIR = DATA_DIR + '/series/'
 
 # run params
-SECTION = "play"
-RUN_ID = "0001"
-GAME_NAME = "carracing"
-RUN_FOLDER = "run/{}/".format(SECTION)
-RUN_FOLDER += "_".join([RUN_ID, GAME_NAME])
+SECTION = 'play'
+RUN_ID = '0001'
+GAME_NAME = 'carracing'
+RUN_FOLDER = 'run/{}/'.format(SECTION)
+RUN_FOLDER += '_'.join([RUN_ID, GAME_NAME])
 
 if not os.path.exists(RUN_FOLDER):
     os.makedirs(RUN_FOLDER)
-    os.makedirs(os.path.join(RUN_FOLDER, "vae"))
-    os.makedirs(os.path.join(RUN_FOLDER, "rnn"))
-    os.makedirs(os.path.join(RUN_FOLDER, "weights"))
+    os.makedirs(os.path.join(RUN_FOLDER, 'vae'))
+    os.makedirs(os.path.join(RUN_FOLDER, 'rnn'))
+    os.makedirs(os.path.join(RUN_FOLDER, 'controller'))
+    os.makedirs(os.path.join(RUN_FOLDER, 'log'))
 
 
 def generate_data_action(t, env):
@@ -44,15 +45,12 @@ def generate_data_action(t, env):
             a = np.array([0, 0, random.random()])
         else:
             pass
-
     # uncomment this line for truly random actions
-    #a = env.action_space.sample()
-
+    # a = env.action_space.sample()
     return a
 
 
 def adjust_obs(obs):
-    # obs[obs==0] = 255
     return obs.astype('float32') / 255.
 
 
