@@ -7,8 +7,8 @@ import time
 import numpy as np
 from gym.wrappers import Monitor
 
-import config
-from env import make_env
+import base.config as config
+from base.env import make_env
 from networks import RNN, VAE, Controller
 
 
