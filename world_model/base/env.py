@@ -1,4 +1,4 @@
-def make_env(env_name, seed=-1, model=None):
+def make_env(env_name, seed=-1, render_mode=False, model=None):
     env = None
     if env_name == 'car_racing':
         from custom_envs.car_racing import CarRacing
